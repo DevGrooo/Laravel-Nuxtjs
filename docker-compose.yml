@@ -1,0 +1,84 @@
+version: '3'
+
+networks:
+  laravel:
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: "nginx_my_docker"
+    ports: 
+      - "8080:80"
+      - "8000:8000"
+    volumes:
+      - ./src:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - laravel
+
+  mysql:
+    image: mysql:5.7.22
+    # ports: 
+    #   - "3307:3306"
+    expose:
+      - "3306"
+    environment:
+      MYSQL_DATABASE: db_auth
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: 12345678
+      MYSQL_ROOT_PASSWORD: 12345678
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    networks:
+      - laravel
+
+  # phpmyadmin
+  phpmyadmin:
+    depends_on:
+      - mysql
+    image: phpmyadmin/phpmyadmin
+    # restart: always
+    restart: unless-stopped
+    ports:
+      - '8081:80'
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: 12345678
+    networks:
+      - laravel
+
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 'php_my_docker'
+    volumes:
+      - ./src:/var/www/html
+    # ports: 
+      # - "9000:9000"
+    expose:
+      - "9000"
+    networks:
+      - laravel
+
+  composer:
+    image: composer:latest
+    container_name: "composer_my_docker"
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - php
+    networks:
+      - laravel
+
+  npm:
+    image: node:13.7
+    container_name: "npm_my_docker"
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    entrypoint: ['npm']
